@@ -1,5 +1,5 @@
-import { Logger } from './logs'
 import { getEnvVar, version } from './api/metadata'
+import { Logger } from './logs'
 import { runtime } from './utils'
 
 // Remove once all deployments support sandbox subdomains
@@ -171,15 +171,15 @@ export function setupRequestController(
 
   let reqTimeout: ReturnType<typeof setTimeout> | undefined = requestTimeoutMs
     ? setTimeout(
-        () =>
-          controller.abort(
-            new DOMException(
-              `Request handshake timed out after ${requestTimeoutMs}ms`,
-              'TimeoutError'
-            )
-          ),
-        requestTimeoutMs
-      )
+      () =>
+        controller.abort(
+          new DOMException(
+            `Request handshake timed out after ${requestTimeoutMs}ms`,
+            'TimeoutError'
+          )
+        ),
+      requestTimeoutMs
+    )
     : undefined
 
   const clearStartTimeout = () => {
@@ -426,6 +426,10 @@ export class ConnectionConfig {
     return (getEnvVar('E2B_DEBUG') || 'false').toLowerCase() === 'true'
   }
 
+  private static get forceHttp() {
+    return (getEnvVar('E2B_FORCE_HTTP') || 'false').toLowerCase() === 'true'
+  }
+
   private static get apiKey() {
     return getEnvVar('E2B_API_KEY')
   }
@@ -456,14 +460,16 @@ export class ConnectionConfig {
       return `http://${this.getHost(sandboxId, opts.envdPort, opts.sandboxDomain)}`
     }
 
+    const scheme = ConnectionConfig.forceHttp ? 'http' : 'https'
+
     const sandboxDomain = opts.sandboxDomain ?? this.domain
     // The stable sandbox host is only guaranteed for E2B prod; the various other hosted domains may not serve sandbox.<domain> yet and will follow up once those are updated.
     // Issue with cors from browser so holding off on using in browser as well.
     if (runtime !== 'browser' && supportedDomains.includes(sandboxDomain)) {
-      return `https://sandbox.${sandboxDomain}`
+      return `${scheme}://sandbox.${sandboxDomain}`
     }
 
-    return `https://${this.getHost(sandboxId, opts.envdPort, sandboxDomain)}`
+    return `${scheme}://${this.getHost(sandboxId, opts.envdPort, sandboxDomain)}`
   }
 
   getSandboxDirectUrl(
@@ -478,7 +484,8 @@ export class ConnectionConfig {
       return `http://${this.getHost(sandboxId, opts.envdPort, opts.sandboxDomain)}`
     }
 
-    return `https://${this.getHost(sandboxId, opts.envdPort, opts.sandboxDomain)}`
+    const scheme = ConnectionConfig.forceHttp ? 'http' : 'https'
+    return `${scheme}://${this.getHost(sandboxId, opts.envdPort, opts.sandboxDomain)}`
   }
 
   getHost(sandboxId: string, port: number, sandboxDomain: string) {

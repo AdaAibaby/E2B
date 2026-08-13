@@ -217,6 +217,10 @@ class ConnectionConfig:
     def get_request_timeout(self, request_timeout: Optional[float] = None):
         return self._get_request_timeout(self.request_timeout, request_timeout)
 
+    @staticmethod
+    def _force_http() -> bool:
+        return os.getenv("E2B_FORCE_HTTP", "false").lower() == "true"
+
     def get_sandbox_url(self, sandbox_id: str, sandbox_domain: str) -> str:
         if self._sandbox_url:
             return self._sandbox_url  # type: ignore[return-value]
@@ -224,11 +228,13 @@ class ConnectionConfig:
         if self.debug:
             return f"http://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
 
+        scheme = "http" if self._force_http() else "https"
+
         sandbox_domain = sandbox_domain or self.domain
         if is_supported_sandbox_domain(sandbox_domain):
-            return f"https://sandbox.{sandbox_domain}"
+            return f"{scheme}://sandbox.{sandbox_domain}"
 
-        return f"https://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
+        return f"{scheme}://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
 
     def get_sandbox_direct_url(self, sandbox_id: str, sandbox_domain: str) -> str:
         if self._sandbox_url:
@@ -237,7 +243,8 @@ class ConnectionConfig:
         if self.debug:
             return f"http://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
 
-        return f"https://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
+        scheme = "http" if self._force_http() else "https"
+        return f"{scheme}://{self.get_host(sandbox_id, sandbox_domain, self.envd_port)}"
 
     def get_host(self, sandbox_id: str, sandbox_domain: str, port: int) -> str:
         """
